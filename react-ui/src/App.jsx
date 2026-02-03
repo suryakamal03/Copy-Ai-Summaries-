@@ -26,7 +26,8 @@ function App() {
       });
 
       if (!infoResponse.ok) {
-        throw new Error('Failed to fetch video info');
+        const errorData = await infoResponse.json();
+        throw new Error(errorData.error || 'Failed to fetch video info');
       }
 
       const info = await infoResponse.json();
@@ -42,7 +43,8 @@ function App() {
       });
 
       if (!summaryResponse.ok) {
-        throw new Error('Failed to generate summary');
+        const errorData = await summaryResponse.json();
+        throw new Error(errorData.error || 'Failed to generate summary');
       }
 
       const summaryData = await summaryResponse.json();

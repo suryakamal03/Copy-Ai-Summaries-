@@ -77,8 +77,13 @@ class Model:
                     except:
                         continue
             
-            response_error = "⚠️ There is a problem with the API key or model availability."
-            return response_error, f"Error: {str(e)}. Please check your API key and ensure you have access to Gemini models."
+            error_str = str(e)
+            if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "quota" in error_str.lower():
+                response_error = "⚠️ API quota exceeded. You've reached your daily limit for Gemini API requests."
+                return response_error, "Please wait a few minutes or get a new API key from https://aistudio.google.com/app/apikey"
+            else:
+                response_error = "⚠️ There is a problem with the API key or model availability."
+                return response_error, f"Error: {str(e)}. Please check your API key and ensure you have access to Gemini models."
     
     @staticmethod
     def openai_chatgpt(transcript, prompt, extra=""):
