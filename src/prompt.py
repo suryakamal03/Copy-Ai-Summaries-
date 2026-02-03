@@ -2,31 +2,139 @@ class Prompt:
     @staticmethod
     def prompt1(ID=0):
         if ID == 0:
-            prompt_text = """Your task: Condense a video transcript into a captivating and informative 250-word summary that highlights key points and engages viewers.
+            # Full Explanation (most detailed)
+            prompt_text = """Your task: Read the complete video transcript below and create a detailed, informative summary that explains the topic thoroughly in plain text.
 
-Guidelines:
-    Focus on essential information: Prioritize the video's core messages, condensing them into point-wise sections.
-    Maintain clarity and conciseness: Craft your summary using accessible language, ensuring it's easily understood by a broad audience.
-    Capture the essence of the video: Go beyond mere listings. Integrate key insights and interesting aspects to create a narrative that draws readers in.
-    Word count: Aim for a maximum of 250 words.
+CRITICAL INSTRUCTION: You MUST analyze the full transcript and create a comprehensive summary that explains HOW things work, not just WHAT they are. Include important details, sequences, rules, and processes mentioned in the video.
 
-Input:
-    The provided video transcript will be your content source.
+OUTPUT FORMAT RULES:
+- Use PLAIN TEXT ONLY - absolutely no Markdown formatting
+- No hashtags (#, ##), bold (**), asterisks, dashes, or bullet symbols
+- Write in natural paragraphs with clear breaks between sections
+- Use complete sentences that flow naturally
+- Length should be sufficient to fully explain the topic (aim for thorough understanding, not brevity)
 
-Example (for illustration purposes only):
-    Setting the Stage: Briefly introduce the video's topic and context.
-    Key Points:
-        Point A: Describe the first crucial aspect with clarity and depth.
-        Point B: Elaborate on a second significant point.
-        (Continue listing and describing key points)
-    Conclusions: Summarize the video's main takeaways, leaving readers with a clear understanding and potential interest in learning more.
+CONTENT REQUIREMENTS:
+- Explain concepts step-by-step as presented in the video
+- Describe how processes work, what is required, and how things are set up
+- Include specific details, rules, sequences, or procedures mentioned
+- Maintain logical flow from introduction through explanation to conclusion
+- Use clear, simple English that anyone can understand
+- Focus on being informative and educational
 
-Additional Tips:
-    Tailor the tone: Adjust your language to resonate with the video's intended audience and overall style.
-    Weave in storytelling elements: Employ vivid descriptions and engaging transitions to make the summary more memorable.
-    Proofread carefully: Ensure your final summary is free of grammatical errors and typos.
+WRITING STYLE:
+- Start by explaining what the video is about
+- Then describe the main concepts or processes in detail
+- Explain how things work, what steps are involved, what is needed
+- Include important specifics like rules, requirements, or sequences
+- Conclude with final points or summary of the overall topic
+- Write as if teaching someone who knows nothing about the subject
 
-By following these guidelines, you can effectively transform video transcripts into captivating and informative summaries, drawing in readers and conveying the video's essence effectively."""
+IMPORTANT GUIDELINES:
+- Base everything ONLY on what is actually said in the transcript
+- Do NOT invent or assume information not present
+- Do NOT oversimplify - include necessary details for understanding
+- Do NOT use abstract or vague language
+- Prefer clarity and completeness over brevity
+- Think of this as a "how it works" or "rules explanation" guide
+
+Example flow (plain text style):
+"This video explains [topic]. To begin with, [first concept]. The process involves [details]. Additionally, [more information]. Finally, [conclusion]."
+
+VIDEO TRANSCRIPT TO SUMMARIZE:
+"""
+        
+        elif ID == "detailed":
+            # Detailed Summary (balanced - medium length)
+            prompt_text = """Your task: Read the video transcript below and create a focused summary that explains the core topic clearly in plain text.
+
+CRITICAL INSTRUCTION: Analyze the transcript and produce a medium-length summary (around 150-200 words) that covers the main topic, core process, and key points. Focus on essentials - avoid exhaustive details, edge cases, or rare scenarios.
+
+OUTPUT FORMAT RULES:
+- Use PLAIN TEXT ONLY - no Markdown formatting
+- No hashtags, bold, asterisks, dashes, or bullet symbols
+- Write in short, clear paragraphs
+- Use complete, flowing sentences
+- Target length: 150-200 words
+
+CONTENT REQUIREMENTS:
+- Opening: explain what the video is about
+- Core setup: describe main requirements or setup (if applicable)
+- Main process: explain the primary flow, rules, or steps
+- Focus on the main points that help viewers understand how it works
+- Use simple, clear, educational language
+
+WHAT TO INCLUDE:
+- Essential information to understand the topic
+- Main rules or process flow
+- Core requirements or setup steps
+- Key definitions if needed
+
+WHAT TO EXCLUDE:
+- Exhaustive lists of edge cases or fouls
+- Rare or technical scenarios
+- Tie-breaker or exceptional end-game details
+- Minor variations or uncommon situations
+- Overly detailed step-by-step breakdowns
+
+WRITING STYLE:
+- Clear and informative without being exhaustive
+- Explain enough to understand how it works
+- Keep paragraphs short and focused
+- Educational but concise
+- Think: "Now I understand the main idea" not "I know every detail"
+
+IMPORTANT GUIDELINES:
+- Base on actual transcript content only
+- Do NOT invent information
+- Keep it focused on core concepts
+- Prioritize clarity and usefulness
+- Aim for practical understanding
+
+Example reference style:
+"This video explains [topic and purpose]. To start, you need [core items]. The main process involves [key steps]. [Core rules]. [Important point]. This gives viewers [outcome]."
+
+VIDEO TRANSCRIPT TO SUMMARIZE:
+"""
+        
+        elif ID == "short":
+            # Short Summary (quick overview)
+            prompt_text = """Your task: Read the video transcript below and create a brief, crisp summary in plain text.
+
+CRITICAL INSTRUCTION: Compress the main points into a quick overview that explains what the video is about and 2-3 key takeaways. Keep it short and skimmable.
+
+OUTPUT FORMAT RULES:
+- Use PLAIN TEXT ONLY - no Markdown formatting
+- No bullet points, hashtags, bold, or special symbols
+- Write in natural, flowing sentences
+- Maximum 4-6 sentences total
+- Keep it crisp and easy to skim
+
+CONTENT REQUIREMENTS:
+- First sentence: what the video is about
+- Next 2-3 sentences: main points or key information
+- Final sentence: conclusion or outcome
+- Use simple, clear language
+- Focus on the essentials only
+
+WRITING STYLE:
+- Straightforward and direct
+- No unnecessary details
+- Easy to read quickly
+- User-friendly and accessible
+
+IMPORTANT GUIDELINES:
+- Base on actual transcript content only
+- Do NOT add information not present
+- Keep it very concise
+- Prioritize clarity over completeness
+- Think "quick overview" not "deep dive"
+
+Example flow:
+"This video explains [topic]. It covers [key point 1] and [key point 2]. The video also discusses [key point 3]. [Brief conclusion]."
+
+VIDEO TRANSCRIPT TO SUMMARIZE:
+"""
 
         elif ID == "timestamp":
             prompt_text = """
@@ -54,10 +162,9 @@ By following these guidelines, you can effectively transform video transcripts i
             """
             
         elif ID == "transcript":
-            prompt_text = """
-            """
+            prompt_text = ""
 
         else:
-            prompt_text = "NA" 
+            prompt_text = ""
 
         return prompt_text

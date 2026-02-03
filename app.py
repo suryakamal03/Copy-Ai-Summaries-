@@ -30,33 +30,15 @@ class AIVideoSummarizer:
     def get_youtube_info(self):
         self.youtube_url = st.text_input("Enter YouTube Video Link")
 
-        if os.getenv("GOOGLE_GEMINI_API_KEY"):
-            self.model_env_checker.append("Gemini") 
-        if os.getenv("OPENAI_CHATGPT_API_KEY"):
-            self.model_env_checker.append("ChatGPT") 
-        if not self.model_env_checker:
-            st.warning('Error while loading the API keys from environment.', icon="⚠️")
+        # Hardcoded to use Gemini
+        self.model_name = "Gemini"
+        self.gemini_model_type = "gemini-flash-latest"  # Using Gemini Flash (fast and reliable)
+        
+        if not os.getenv("GOOGLE_GEMINI_API_KEY"):
+            st.warning('Error: GOOGLE_GEMINI_API_KEY not found in environment.', icon="⚠️")
 
         with self.col2:
-            if self.model_env_checker:
-                with st.container():
-                    self.model_name = st.selectbox(
-                        'Select the model',
-                        self.model_env_checker)
-
-                    def switch(model_name):
-                        if model_name == "Gemini":
-                            st.columns(3)[1].image("https://i.imgur.com/w9izNH5.png", use_column_width=True)
-                        elif model_name == "ChatGPT":
-                            st.columns(3)[1].image("https://i.imgur.com/Sr9e9ZC.png", use_column_width=True)
-
-                    switch(self.model_name)
-                    if self.model_name == "Gemini":
-                        self.gemini_model_type = st.selectbox(
-                            "Select Gemini Model",
-                            ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"],
-                            index=0
-                        )
+            st.columns(3)[1].image("https://i.imgur.com/w9izNH5.png", use_column_width=True)
 
         if self.youtube_url:
             self.video_id = GetVideo.Id(self.youtube_url)
@@ -69,19 +51,30 @@ class AIVideoSummarizer:
             st.image(f"http://img.youtube.com/vi/{self.video_id}/0.jpg", use_column_width=True)
 
     def generate_summary(self):
+        # Dropdown for summary type selection
+        summary_type = st.selectbox(
+            "Summary Type:",
+            ("Detailed Summary", "Short Summary", "Full Explanation"),
+            index=0  # Detailed Summary is default
+        )
+        
         if st.button(":rainbow[**Get Summary**]"):
             self.video_transcript = GetVideo.transcript(self.youtube_url)
-            if self.model_name == "Gemini":
-                self.summary = Model.google_gemini(
-                    transcript=self.video_transcript,
-                    prompt=Prompt.prompt1(),
-                    model_type=self.gemini_model_type
-                )
-            elif self.model_name == "ChatGPT":
-                self.summary = Model.openai_chatgpt(
-                    transcript=self.video_transcript,
-                    prompt=Prompt.prompt1()
-                )
+            
+            # Map selection to prompt ID
+            prompt_map = {
+                "Short Summary": "short",
+                "Detailed Summary": "detailed",
+                "Full Explanation": 0
+            }
+            
+            prompt_id = prompt_map[summary_type]
+            
+            self.summary = Model.google_gemini(
+                transcript=self.video_transcript,
+                prompt=Prompt.prompt1(ID=prompt_id),
+                model_type=self.gemini_model_type
+            )
             st.markdown("## Summary:")
             if isinstance(self.summary, tuple):
                 st.error(self.summary[0])
@@ -94,19 +87,12 @@ class AIVideoSummarizer:
         if st.button(":rainbow[**Get Timestamps**]"):
             self.video_transcript_time = GetVideo.transcript_time(self.youtube_url)
             youtube_url_full = f"https://youtube.com/watch?v={self.video_id}"
-            if self.model_name == "Gemini":
-                self.time_stamps = Model.google_gemini(
-                    self.video_transcript_time,
-                    Prompt.prompt1(ID='timestamp'),
-                    extra=youtube_url_full,
-                    model_type=self.gemini_model_type
-                )
-            elif self.model_name == "ChatGPT":
-                self.time_stamps = Model.openai_chatgpt(
-                    self.video_transcript_time,
-                    Prompt.prompt1(ID='timestamp'),
-                    extra=youtube_url_full
-                )
+            self.time_stamps = Model.google_gemini(
+                self.video_transcript_time,
+                Prompt.prompt1(ID='timestamp'),
+                extra=youtube_url_full,
+                model_type=self.gemini_model_type
+            )
             st.markdown("## Timestamps:")
             if isinstance(self.time_stamps, tuple):
                 st.error(self.time_stamps[0])
