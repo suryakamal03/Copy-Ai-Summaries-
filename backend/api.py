@@ -9,6 +9,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from src.video_info import GetVideo
 from src.model import Model
 from src.prompt import Prompt
+from src.rag_chat import RAGChat
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
@@ -187,6 +188,77 @@ VIDEO TRANSCRIPT WITH TIMESTAMPS:
         return jsonify({
             'highlights': highlights
         })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/chat/ingest', methods=['POST'])
+def chat_ingest():
+    """Ingest video transcript into ChromaDB for RAG chatbot"""
+    try:
+        data = request.json
+        youtube_url = data.get('url')
+        
+        if not youtube_url:
+            return jsonify({'error': 'URL is required'}), 400
+        
+        # Get transcript
+        transcript = GetVideo.transcript(youtube_url)
+        
+        if not transcript or transcript.startswith('Error:'):
+            print(f"Failed to get transcript for {youtube_url}")
+            return jsonify({'error': 'Could not fetch transcript'}), 400
+        
+        print(f"Transcript fetched successfully, length: {len(transcript)} chars")
+        
+        # Get video title
+        video_title = GetVideo.title(youtube_url)
+        print(f"Video title: {video_title}")
+        
+        # Initialize RAG and ingest
+        print("Initializing RAG chat...")
+        rag = RAGChat()
+        print("Starting ingestion...")
+        collection_id = rag.ingest_transcript(youtube_url, transcript, video_title)
+        print(f"Ingestion completed successfully. Collection ID: {collection_id}")
+        
+        return jsonify({
+            'success': True,
+            'collection_id': collection_id,
+            'message': 'Transcript ingested successfully'
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/chat/query', methods=['POST'])
+def chat_query():
+    """Query the RAG chatbot"""
+    try:
+        data = request.json
+        youtube_url = data.get('url')
+        question = data.get('question')
+        
+        if not youtube_url or not question:
+            return jsonify({'error': 'URL and question are required'}), 400
+        
+        # Initialize RAG
+        rag = RAGChat()
+        
+        # Check if collection exists, if not ingest first
+        if not rag.check_collection_exists(youtube_url):
+            # Auto-ingest transcript
+            transcript = GetVideo.transcript(youtube_url)
+            if not transcript or transcript.startswith('Error:'):
+                return jsonify({'error': 'Could not fetch transcript'}), 400
+            
+            video_title = GetVideo.title(youtube_url)
+            rag.ingest_transcript(youtube_url, transcript, video_title)
+        
+        # Query chat
+        result = rag.query_chat(youtube_url, question)
+        
+        return jsonify(result)
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500

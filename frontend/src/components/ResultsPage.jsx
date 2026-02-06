@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiRefreshCw, FiDownload, FiGlobe, FiSend } from 'react-icons/fi';
 
 function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onRegenerateSummary }) {
@@ -9,6 +9,38 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
   const [loading, setLoading] = useState(false);
   const [highlights, setHighlights] = useState([]);
   const [highlightsLoading, setHighlightsLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [ingestionComplete, setIngestionComplete] = useState(false);
+  const [ingestionError, setIngestionError] = useState(null);
+
+  // Auto-ingest transcript for RAG on mount
+  useEffect(() => {
+    const ingestTranscript = async () => {
+      try {
+        console.log('Starting transcript ingestion...');
+        const response = await fetch('http://localhost:5000/api/chat/ingest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: videoUrl }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Ingestion complete:', data);
+          setIngestionComplete(true);
+        } else {
+          const error = await response.json();
+          console.error('Ingestion failed:', error);
+          setIngestionError(error.error || 'Failed to process transcript');
+        }
+      } catch (error) {
+        console.error('Error ingesting transcript:', error);
+        setIngestionError('Network error during transcript processing');
+      }
+    };
+    ingestTranscript();
+  }, [videoUrl]);
 
   // Fetch highlights when highlights tab is clicked
   const handleTabChange = async (tab) => {
@@ -75,11 +107,46 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
   const videoId = videoInfo?.videoId || getVideoId(videoUrl);
   const videoTitle = videoInfo?.title || 'Video Summary';
 
-  const handleAskQuestion = (e) => {
+  const handleAskQuestion = async (e) => {
     e.preventDefault();
-    // Handle question submission
-    console.log('Question:', question);
+    if (!question.trim() || chatLoading || !ingestionComplete) return;
+
+    const userQuestion = question.trim();
     setQuestion('');
+
+    // Add user message to chat
+    setChatMessages(prev => [...prev, { role: 'user', content: userQuestion }]);
+    setChatLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/chat/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: videoUrl, question: userQuestion }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setChatMessages(prev => [
+          ...prev,
+          { role: 'assistant', content: data.answer, sources: data.sources }
+        ]);
+      } else {
+        const error = await response.json();
+        setChatMessages(prev => [
+          ...prev,
+          { role: 'assistant', content: `Error: ${error.error}` }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error querying chat:', error);
+      setChatMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: 'Failed to get response. Please try again.' }
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   // Format transcript for display
@@ -305,7 +372,81 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
               <div className="text-gray-600 text-sm">Mind Map feature coming soon...</div>
             )}
             {activeTab === 'chat' && (
-              <div className="text-gray-600 text-sm">Chat feature coming soon...</div>
+              <div className="flex flex-col h-full">
+                {chatMessages.length === 0 ? (
+                  <div className="flex items-center justify-center flex-1">
+                    {!ingestionComplete ? (
+                      <div className="text-center">
+                        {ingestionError ? (
+                          <div className="text-red-500 text-sm">
+                            <p className="font-semibold mb-1">Error processing transcript</p>
+                            <p className="text-xs">{ingestionError}</p>
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 text-sm">
+                            <div className="flex items-center justify-center gap-2 mb-2">
+                              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              <span>Processing transcript...</span>
+                            </div>
+                            <p className="text-xs text-gray-400">This may take a few moments</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 text-sm">
+                        Ask questions about the video content below
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+                    {chatMessages.map((msg, index) => (
+                      <div
+                        key={index}
+                        className={`flex ${
+                          msg.role === 'user' ? 'justify-end' : 'justify-start'
+                        }`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                            msg.role === 'user'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-900'
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          {msg.sources && msg.sources.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-300">
+                              <p className="text-xs text-gray-600 font-semibold mb-1">Sources:</p>
+                              {msg.sources.map((source, idx) => (
+                                <p key={idx} className="text-xs text-gray-500 italic mt-1">
+                                  "{source.substring(0, 100)}..."
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {chatLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-gray-100 text-gray-900 rounded-lg px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <svg className="animate-spin h-4 w-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span className="text-sm">Thinking...</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -316,12 +457,24 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Ask AI about this content. Need more details or a different view?"
-                className="w-full pl-4 pr-12 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!ingestionComplete || chatLoading}
+                placeholder={
+                  !ingestionComplete 
+                    ? "Processing transcript..." 
+                    : "Ask AI about this content. Need more details or a different view?"
+                }
+                className={`w-full pl-4 pr-12 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  !ingestionComplete || chatLoading ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
               />
               <button
                 type="submit"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700"
+                disabled={!ingestionComplete || chatLoading}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 ${
+                  ingestionComplete && !chatLoading 
+                    ? 'text-blue-600 hover:text-blue-700' 
+                    : 'text-gray-400 cursor-not-allowed'
+                }`}
               >
                 <FiSend className="w-5 h-5" />
               </button>

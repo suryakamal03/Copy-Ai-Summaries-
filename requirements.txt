@@ -6,3 +6,7 @@ python-dotenv
 beautifulsoup4
 st-copy-to-clipboard
 strip-markdown
+flask
+flask-cors
+chromadb
+sentence-transformers

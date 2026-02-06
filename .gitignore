@@ -195,3 +195,9 @@ yarn-error.log*
 # OS files
 .DS_Store
 Thumbs.db
+# ChromaDB storage
+chroma_db/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
