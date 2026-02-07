@@ -263,5 +263,207 @@ def chat_query():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/mindmap', methods=['POST'])
+def generate_mindmap():
+    """Generate mindmap from video transcript using ChromaDB chunks and Gemini"""
+    try:
+        data = request.json
+        youtube_url = data.get('url')
+        
+        if not youtube_url:
+            return jsonify({'error': 'URL is required'}), 400
+        
+        print(f"Generating mindmap for URL: {youtube_url}")
+        
+        # Get transcript
+        transcript = GetVideo.transcript(youtube_url)
+        
+        print(f"Transcript fetched: {len(transcript) if transcript else 0} characters")
+        
+        if not transcript or transcript.startswith('Error:'):
+            error_msg = transcript if transcript else 'No transcript available'
+            print(f"Error fetching transcript: {error_msg}")
+            return jsonify({'error': f'Could not fetch transcript: {error_msg}'}), 400
+        
+        # Get video title
+        video_title = GetVideo.title(youtube_url)
+        
+        # Initialize RAG to work with ChromaDB
+        print("Initializing RAG for ChromaDB access...")
+        rag = RAGChat()
+        
+        # Check if collection exists, if not ingest first
+        collection_id = rag.generate_video_id(youtube_url)
+        try:
+            collection = rag.client.get_collection(name=collection_id)
+            print(f"Collection found: {collection_id}")
+        except:
+            print(f"Collection not found, ingesting transcript...")
+            collection_id = rag.ingest_transcript(youtube_url, transcript, video_title)
+            collection = rag.client.get_collection(name=collection_id)
+            print(f"Transcript ingested successfully")
+        
+        # Get ALL chunks from ChromaDB
+        all_results = collection.get()
+        all_chunks = all_results.get('documents', [])
+        chunk_count = len(all_chunks)
+        print(f"Retrieved {chunk_count} chunks from ChromaDB")
+        
+        if not all_chunks:
+            print("No chunks found, falling back to raw transcript")
+            chunks_text = transcript
+        else:
+            # Organize chunks by their index for proper ordering
+            metadatas = all_results.get('metadatas', [])
+            indexed_chunks = []
+            for i, chunk in enumerate(all_chunks):
+                chunk_index = metadatas[i].get('chunk_index', i) if i < len(metadatas) else i
+                indexed_chunks.append((chunk_index, chunk))
+            
+            # Sort by index and join
+            indexed_chunks.sort(key=lambda x: x[0])
+            chunks_text = "\n\n".join([chunk for _, chunk in indexed_chunks])
+            print(f"Organized and concatenated {len(indexed_chunks)} chunks")
+        
+        # Generate mindmap using Gemini with valid Mermaid syntax
+        mindmap_prompt = """You are an expert at creating valid Mermaid.js mindmaps. Analyze the video transcript and create a hierarchical mindmap.
+
+MERMAID MINDMAP SYNTAX RULES (CRITICAL - FOLLOW EXACTLY):
+
+1. Valid Mermaid mindmap structure:
+```
+mindmap
+  root((Main Topic))
+    Branch 1
+      Sub Branch 1a
+      Sub Branch 1b
+    Branch 2
+      Sub Branch 2a
+```
+
+2. INDENTATION RULES (EXACT SPACES):
+   - "mindmap" = no indentation
+   - "root" = 2 spaces
+   - Level 1 branches = 4 spaces
+   - Level 2 branches = 6 spaces
+   - Level 3 branches = 8 spaces
+
+3. TEXT RULES:
+   - Root node MUST use double parentheses: root((Text Here))
+   - All other nodes: just plain text, NO special characters
+   - NO quotes, NO brackets except for root
+   - Keep text simple: 2-5 words per node
+   - Avoid special chars: & / \ @ # $ % * + =
+
+4. STRUCTURE REQUIREMENTS:
+   - Create 5-7 main branches (Level 1)
+   - Each main branch should have 3-5 sub-branches (Level 2)
+   - Some sub-branches can have details (Level 3)
+   - Make it hierarchical and balanced
+
+5. EXAMPLE (COPY THIS STRUCTURE):
+mindmap
+  root((Ethical Hacking Basics))
+    Introduction and Setup
+      What is Ethical Hacking
+      Legal Framework
+      Kali Linux Setup
+    Core Tools
+      Network Scanners
+        Nmap Tool
+        Netdiscover
+      Password Crackers
+      Vulnerability Scanners
+    Hacking Techniques
+      Wi-Fi Hacking
+        WPA Cracking
+        Aircrack Suite
+      Web Exploitation
+      SQL Injection
+    Advanced Methods
+      Metasploit Framework
+      Social Engineering
+      Privilege Escalation
+    Security Practices
+      Legal Compliance
+      Ethical Guidelines
+      Permission Requirements
+
+IMPORTANT:
+- Output ONLY the mindmap code
+- Start with "mindmap" (no code blocks)
+- Use EXACT spacing (count the spaces!)
+- NO special characters in node text
+- Make it deep and hierarchical
+
+Now create the mindmap from the transcript:"""
+        
+        # Call Gemini with chunks
+        print(f"Calling Gemini API to generate hierarchical mindmap...")
+        mindmap_code = Model.google_gemini(
+            chunks_text,
+            mindmap_prompt,
+            "",
+            "gemini-flash-latest"
+        )
+        
+        print(f"Gemini response type: {type(mindmap_code)}")
+        
+        if isinstance(mindmap_code, tuple):
+            print(f"Gemini API error: {mindmap_code}")
+            return jsonify({'error': mindmap_code[0], 'details': mindmap_code[1]}), 500
+        
+        # Clean up the response - remove markdown code blocks if present
+        mindmap_code = mindmap_code.strip()
+        print(f"Generated mindmap length: {len(mindmap_code)} characters")
+        
+        if mindmap_code.startswith('```'):
+            # Remove markdown code fences
+            lines = mindmap_code.split('\n')
+            mindmap_code = '\n'.join(lines[1:-1]) if len(lines) > 2 else mindmap_code
+            mindmap_code = mindmap_code.replace('```mermaid', '').replace('```', '').strip()
+        
+        # Additional cleanup - ensure it starts with "mindmap"
+        if not mindmap_code.startswith('mindmap'):
+            lines = mindmap_code.split('\n')
+            for i, line in enumerate(lines):
+                if line.strip().startswith('mindmap'):
+                    mindmap_code = '\n'.join(lines[i:])
+                    break
+        
+        # Clean special characters that break Mermaid
+        lines = mindmap_code.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            # Keep indentation but clean text
+            if line.strip():
+                # Don't clean the root node with (())
+                if '((' in line and '))' in line:
+                    cleaned_lines.append(line)
+                else:
+                    # Remove problematic characters from regular nodes
+                    cleaned_line = line.replace(':', ' -').replace(';', ',').replace('"', '').replace("'", '')
+                    cleaned_line = cleaned_line.replace('&', 'and').replace('/', ' or ')
+                    cleaned_lines.append(cleaned_line)
+            else:
+                cleaned_lines.append(line)
+        
+        mindmap_code = '\n'.join(cleaned_lines)
+        
+        print(f"Mindmap generated successfully with {chunk_count} chunks")
+        print(f"First 300 chars: {mindmap_code[:300]}")
+        
+        return jsonify({
+            'mindmap': mindmap_code,
+            'title': video_title,
+            'chunks_used': chunk_count
+        })
+    
+    except Exception as e:
+        print(f"Exception in generate_mindmap: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

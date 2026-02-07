@@ -13,6 +13,9 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
   const [chatLoading, setChatLoading] = useState(false);
   const [ingestionComplete, setIngestionComplete] = useState(false);
   const [ingestionError, setIngestionError] = useState(null);
+  const [mindmap, setMindmap] = useState('');
+  const [mindmapLoading, setMindmapLoading] = useState(false);
+  const [mindmapChunksUsed, setMindmapChunksUsed] = useState(0);
 
   // Auto-ingest transcript for RAG on mount
   useEffect(() => {
@@ -146,6 +149,40 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
       ]);
     } finally {
       setChatLoading(false);
+    }
+  };
+
+  const handleGenerateMindmap = async () => {
+    setMindmapLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/mindmap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: videoUrl }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMindmap(data.mindmap);
+        setMindmapChunksUsed(data.chunks_used || 0);
+      } else {
+        const error = await response.json();
+        console.error('Error generating mindmap:', error);
+        
+        // Check if it's a rate limit error
+        if (error.error && error.error.includes('rate limit')) {
+          alert('⚠️ YouTube Rate Limit Reached\n\nYouTube is temporarily blocking transcript requests from your IP.\n\nSolutions:\n1. Wait 10-15 minutes and try again\n2. Try a different video\n3. Restart your router to get a new IP');
+        }
+        
+        setMindmap('error');
+      }
+    } catch (error) {
+      console.error('Error generating mindmap:', error);
+      setMindmap('error');
+    } finally {
+      setMindmapLoading(false);
     }
   };
 
@@ -369,7 +406,123 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
               </div>
             )}
             {activeTab === 'mind-map' && (
-              <div className="text-gray-600 text-sm">Mind Map feature coming soon...</div>
+              <div className="h-full flex flex-col">
+                {!mindmap ? (
+                  <div className="flex flex-col items-center justify-center flex-1">
+                    <div className="text-center max-w-md">
+                      <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                      </svg>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Generate Mind Map</h3>
+                      <p className="text-sm text-gray-600 mb-6">
+                        Create a visual mind map that organizes the key concepts and topics from this video
+                      </p>
+                      <button
+                        onClick={handleGenerateMindmap}
+                        disabled={mindmapLoading}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {mindmapLoading ? (
+                          <>
+                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Generating Mind Map...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Generate Mind Map
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : mindmap === 'error' ? (
+                  <div className="flex items-center justify-center flex-1">
+                    <div className="text-center text-red-500">
+                      <p className="font-semibold mb-1">Failed to generate mind map</p>
+                      <p className="text-sm">Please try again</p>
+                      <button
+                        onClick={handleGenerateMindmap}
+                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Mind Map</h3>
+                        {mindmapChunksUsed > 0 && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Generated from {mindmapChunksUsed} ChromaDB chunks
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => { setMindmap(''); setMindmapChunksUsed(0); }}
+                        className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Regenerate
+                      </button>
+                    </div>
+                    <div className="flex-1 border border-gray-200 rounded-lg overflow-hidden bg-white">
+                      <iframe
+                        srcDoc={`
+                          <!DOCTYPE html>
+                          <html>
+                            <head>
+                              <script type="module">
+                                import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+                                mermaid.initialize({ 
+                                  startOnLoad: true,
+                                  theme: 'default',
+                                  mindmap: {
+                                    padding: 20,
+                                    useMaxWidth: true
+                                  }
+                                });
+                              </script>
+                              <style>
+                                body {
+                                  margin: 0;
+                                  padding: 20px;
+                                  display: flex;
+                                  justify-content: center;
+                                  align-items: center;
+                                  min-height: 100vh;
+                                  background: white;
+                                }
+                                .mermaid {
+                                  width: 100%;
+                                  display: flex;
+                                  justify-content: center;
+                                }
+                              </style>
+                            </head>
+                            <body>
+                              <div class="mermaid">
+${mindmap}
+                              </div>
+                            </body>
+                          </html>
+                        `}
+                        className="w-full h-full"
+                        title="Mind Map"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             {activeTab === 'chat' && (
               <div className="flex flex-col h-full">

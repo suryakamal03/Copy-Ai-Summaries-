@@ -36,12 +36,19 @@ class GetVideo:
         video_id = GetVideo.Id(link)
         try:
             api = YouTubeTranscriptApi()
+            # Try with default first
             transcript_list = api.fetch(video_id)
             final_transcript = " ".join(snippet.text for snippet in transcript_list)
             return final_transcript
         except Exception as e:
-            print(f"Error fetching transcript: {e}")
-            return f"Error: Could not fetch transcript. {str(e)}"
+            error_msg = str(e)
+            print(f"Error fetching transcript: {error_msg}")
+            
+            # If it's a rate limit error, provide helpful message
+            if "Too Many Requests" in error_msg or "blocking requests" in error_msg:
+                return "Error: YouTube rate limit reached. Please wait 10-15 minutes and try again, or try a different video."
+            else:
+                return f"Error: Could not fetch transcript. {error_msg}"
 
     @staticmethod
     def transcript_time(link):
