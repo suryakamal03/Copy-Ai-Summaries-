@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiRefreshCw, FiDownload, FiGlobe, FiSend } from 'react-icons/fi';
+import { FiRefreshCw, FiSend } from 'react-icons/fi';
 
 function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onRegenerateSummary }) {
   const [activeTab, setActiveTab] = useState('output');
@@ -221,31 +221,20 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
   const transcriptChunks = formatTranscript(transcript);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Header */}
-      <header className="border-b border-gray-200 px-6 py-4">
+      <header className="border-b border-slate-800 px-6 py-4 bg-slate-950/90 backdrop-blur">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900 truncate max-w-2xl">
+          <h1 className="text-xl font-semibold text-slate-100 truncate max-w-2xl">
             {videoTitle}
           </h1>
           <div className="flex items-center gap-3">
             <button
               onClick={onNewVideo}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
             >
               <FiRefreshCw className="w-4 h-4" />
               <span className="text-sm font-medium">New Video</span>
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <FiDownload className="w-4 h-4" />
-              <span className="text-sm font-medium">Export</span>
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <FiGlobe className="w-4 h-4" />
-              <span className="text-sm font-medium">Auto Detect</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
             </button>
           </div>
         </div>
@@ -254,9 +243,9 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
       {/* Main Content */}
       <div className="flex h-[calc(100vh-73px)]">
         {/* Left Panel - Video */}
-        <div className="w-[52%] border-r border-gray-200 p-6 flex flex-col">
+        <div className="w-[52%] border-r border-slate-800 p-6 flex flex-col bg-slate-950">
           {/* Video Player */}
-          <div className="bg-black rounded-lg overflow-hidden mb-4">
+          <div className="bg-black rounded-lg overflow-hidden mb-4 ring-1 ring-slate-800">
             <iframe
               className="w-full aspect-video"
               src={`https://www.youtube.com/embed/${videoId}`}
@@ -272,7 +261,7 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
             href={videoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-6 text-sm"
+            className="flex items-center gap-2 text-sky-400 hover:text-sky-300 mb-6 text-sm"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
@@ -281,35 +270,35 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
           </a>
 
           {/* Video Script Section */}
-          <div className="flex-1 bg-gray-50 rounded-lg p-4 overflow-hidden flex flex-col">
+          <div className="flex-1 bg-slate-900 rounded-lg p-4 overflow-hidden flex flex-col border border-slate-800">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-900">Video Script</h3>
-              <button className="flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900">
+              <h3 className="text-sm font-semibold text-slate-100">Video Script</h3>
+              <button className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-slate-100">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
                 Copy
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto text-sm text-gray-600 space-y-2">
+            <div className="flex-1 overflow-y-auto text-sm text-slate-300 space-y-2">
               {transcriptChunks.length > 0 ? (
                 transcriptChunks.map((chunk, idx) => (
                   <p key={idx} className="flex gap-2">
-                    <span className="text-gray-400 font-mono text-xs">{chunk.time}</span>
+                    <span className="text-slate-500 font-mono text-xs">{chunk.time}</span>
                     <span>{chunk.text}</span>
                   </p>
                 ))
               ) : (
-                <p className="text-gray-400 italic">No transcript available</p>
+                <p className="text-slate-500 italic">No transcript available</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Right Panel - Output */}
-        <div className="w-[48%] flex flex-col">
+        <div className="w-[48%] flex flex-col bg-slate-950">
           {/* Tabs */}
-          <div className="border-b border-gray-200">
+          <div className="border-b border-slate-800">
             <div className="flex">
               {['Output', 'Highlights', 'Mind Map', 'Chat'].map((tab) => (
                 <button
@@ -317,8 +306,8 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
                   onClick={() => handleTabChange(tab.toLowerCase().replace(' ', '-'))}
                   className={`px-6 py-3.5 text-sm font-medium border-b-2 transition-colors ${
                     activeTab === tab.toLowerCase().replace(' ', '-')
-                      ? 'border-gray-900 text-gray-900'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                      ? 'border-sky-400 text-sky-300'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   {tab}
@@ -328,19 +317,19 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-6 bg-slate-950">
             {activeTab === 'output' && (
               <div>
                 {/* Summary Type Selector */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
                     Summary Type:
                   </label>
                   <select
                     value={summaryType}
                     onChange={handleSummaryTypeChange}
                     disabled={loading}
-                    className="block w-full max-w-xs px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
+                    className="block w-full max-w-xs px-3 py-2 bg-slate-900 border border-slate-700 text-slate-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent disabled:bg-slate-800 disabled:cursor-not-allowed text-sm"
                   >
                     <option value="short">Short Summary</option>
                     <option value="detailed">Detailed Summary</option>
@@ -352,15 +341,15 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
                 {loading ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-3">
-                      <svg className="animate-spin h-8 w-8 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin h-8 w-8 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <p className="text-sm text-gray-600">Generating summary...</p>
+                      <p className="text-sm text-slate-400">Generating summary...</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-gray-800 text-[15px] leading-relaxed whitespace-pre-wrap">
+                  <div className="text-slate-200 text-[15px] leading-relaxed whitespace-pre-wrap">
                     {currentSummary || 'No summary available'}
                   </div>
                 )}
@@ -371,35 +360,35 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
                 {highlightsLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-3">
-                      <svg className="animate-spin h-8 w-8 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin h-8 w-8 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <p className="text-sm text-gray-600">Generating highlights...</p>
+                      <p className="text-sm text-slate-400">Generating highlights...</p>
                     </div>
                   </div>
                 ) : highlights.length > 0 ? (
                   <div className="space-y-6">
                     {highlights.map((highlight, index) => (
-                      <div key={index} className="border-l-4 border-blue-500 pl-4">
+                      <div key={index} className="border-l-4 border-sky-500 pl-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-blue-600 font-mono text-sm font-semibold">
+                          <span className="text-sky-400 font-mono text-sm font-semibold">
                             {highlight.timestamp}
                           </span>
-                          <button className="ml-auto p-1 text-gray-400 hover:text-gray-600">
+                          <button className="ml-auto p-1 text-slate-400 hover:text-slate-200">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                           </button>
                         </div>
-                        <p className="text-gray-800 text-[15px] leading-relaxed">
+                        <p className="text-slate-200 text-[15px] leading-relaxed">
                           {highlight.description}
                         </p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-gray-500">
+                  <div className="text-center py-12 text-slate-400">
                     No highlights available
                   </div>
                 )}
@@ -410,17 +399,17 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
                 {!mindmap ? (
                   <div className="flex flex-col items-center justify-center flex-1">
                     <div className="text-center max-w-md">
-                      <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-16 h-16 mx-auto mb-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                       </svg>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Generate Mind Map</h3>
-                      <p className="text-sm text-gray-600 mb-6">
+                      <h3 className="text-lg font-semibold text-slate-100 mb-2">Generate Mind Map</h3>
+                      <p className="text-sm text-slate-400 mb-6">
                         Create a visual mind map that organizes the key concepts and topics from this video
                       </p>
                       <button
                         onClick={handleGenerateMindmap}
                         disabled={mindmapLoading}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-sky-600 text-white font-medium rounded-lg hover:bg-sky-700 transition-colors disabled:bg-slate-700 disabled:cursor-not-allowed"
                       >
                         {mindmapLoading ? (
                           <>
@@ -443,12 +432,12 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
                   </div>
                 ) : mindmap === 'error' ? (
                   <div className="flex items-center justify-center flex-1">
-                    <div className="text-center text-red-500">
+                      <div className="text-center text-red-400">
                       <p className="font-semibold mb-1">Failed to generate mind map</p>
-                      <p className="text-sm">Please try again</p>
+                      <p className="text-sm text-slate-400">Please try again</p>
                       <button
                         onClick={handleGenerateMindmap}
-                        className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        className="mt-4 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors"
                       >
                         Retry
                       </button>
@@ -458,16 +447,16 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
                   <div className="h-full flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Mind Map</h3>
+                        <h3 className="text-lg font-semibold text-slate-100">Mind Map</h3>
                         {mindmapChunksUsed > 0 && (
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-slate-400 mt-0.5">
                             Generated from {mindmapChunksUsed} ChromaDB chunks
                           </p>
                         )}
                       </div>
                       <button
                         onClick={() => { setMindmap(''); setMindmapChunksUsed(0); }}
-                        className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+                        className="text-sm text-slate-400 hover:text-slate-200 flex items-center gap-1"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -475,7 +464,7 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
                         Regenerate
                       </button>
                     </div>
-                    <div className="flex-1 border border-gray-200 rounded-lg overflow-hidden bg-white">
+                    <div className="flex-1 border border-slate-800 rounded-lg overflow-hidden bg-slate-900">
                       <iframe
                         srcDoc={`
                           <!DOCTYPE html>
@@ -485,7 +474,7 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
                                 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
                                 mermaid.initialize({ 
                                   startOnLoad: true,
-                                  theme: 'default',
+                                  theme: 'dark',
                                   mindmap: {
                                     padding: 20,
                                     useMaxWidth: true
@@ -500,7 +489,7 @@ function ResultsPage({ videoUrl, videoInfo, summary, transcript, onNewVideo, onR
                                   justify-content: center;
                                   align-items: center;
                                   min-height: 100vh;
-                                  background: white;
+                                  background: #0f172a;
                                 }
                                 .mermaid {
                                   width: 100%;
@@ -536,7 +525,7 @@ ${mindmap}
                             <p className="text-xs">{ingestionError}</p>
                           </div>
                         ) : (
-                          <div className="text-gray-500 text-sm">
+                            <div className="text-slate-400 text-sm">
                             <div className="flex items-center justify-center gap-2 mb-2">
                               <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -549,7 +538,7 @@ ${mindmap}
                         )}
                       </div>
                     ) : (
-                      <div className="text-gray-500 text-sm">
+                          <div className="text-slate-400 text-sm">
                         Ask questions about the video content below
                       </div>
                     )}
@@ -586,9 +575,9 @@ ${mindmap}
                     ))}
                     {chatLoading && (
                       <div className="flex justify-start">
-                        <div className="bg-gray-100 text-gray-900 rounded-lg px-4 py-3">
+                          <div className="bg-slate-900 text-slate-100 rounded-lg px-4 py-3 border border-slate-800">
                           <div className="flex items-center gap-2">
-                            <svg className="animate-spin h-4 w-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -604,7 +593,7 @@ ${mindmap}
           </div>
 
           {/* Bottom Input */}
-          <div className="border-t border-gray-200 p-4">
+          <div className="border-t border-slate-800 p-4 bg-slate-950">
             <form onSubmit={handleAskQuestion} className="relative">
               <input
                 type="text"
@@ -616,8 +605,8 @@ ${mindmap}
                     ? "Processing transcript..." 
                     : "Ask AI about this content. Need more details or a different view?"
                 }
-                className={`w-full pl-4 pr-12 py-3 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  !ingestionComplete || chatLoading ? 'bg-gray-100 cursor-not-allowed' : ''
+                className={`w-full pl-4 pr-12 py-3 text-sm border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent bg-slate-900 text-slate-100 placeholder:text-slate-500 ${
+                  !ingestionComplete || chatLoading ? 'bg-slate-800 cursor-not-allowed' : ''
                 }`}
               />
               <button
@@ -625,8 +614,8 @@ ${mindmap}
                 disabled={!ingestionComplete || chatLoading}
                 className={`absolute right-3 top-1/2 -translate-y-1/2 ${
                   ingestionComplete && !chatLoading 
-                    ? 'text-blue-600 hover:text-blue-700' 
-                    : 'text-gray-400 cursor-not-allowed'
+                    ? 'text-sky-400 hover:text-sky-300' 
+                    : 'text-slate-500 cursor-not-allowed'
                 }`}
               >
                 <FiSend className="w-5 h-5" />

@@ -1,15 +1,54 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import LandingPage from './components/LandingPage';
 import ResultsPage from './components/ResultsPage';
 
+const APP_STATE_KEY = 'youtube_summarizer_app_state_v1';
+
+const loadSavedState = () => {
+  const fallback = {
+    videoUrl: '',
+    videoInfo: null,
+    summary: '',
+    transcript: '',
+    showResults: false,
+  };
+
+  try {
+    const raw = localStorage.getItem(APP_STATE_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return {
+      videoUrl: parsed.videoUrl || '',
+      videoInfo: parsed.videoInfo || null,
+      summary: parsed.summary || '',
+      transcript: parsed.transcript || '',
+      showResults: Boolean(parsed.showResults),
+    };
+  } catch {
+    return fallback;
+  }
+};
+
 function App() {
-  const [videoUrl, setVideoUrl] = useState('');
-  const [videoInfo, setVideoInfo] = useState(null);
-  const [summary, setSummary] = useState('');
-  const [transcript, setTranscript] = useState('');
-  const [showResults, setShowResults] = useState(false);
+  const initialState = loadSavedState();
+  const [videoUrl, setVideoUrl] = useState(initialState.videoUrl);
+  const [videoInfo, setVideoInfo] = useState(initialState.videoInfo);
+  const [summary, setSummary] = useState(initialState.summary);
+  const [transcript, setTranscript] = useState(initialState.transcript);
+  const [showResults, setShowResults] = useState(initialState.showResults);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const stateToSave = {
+      videoUrl,
+      videoInfo,
+      summary,
+      transcript,
+      showResults,
+    };
+    localStorage.setItem(APP_STATE_KEY, JSON.stringify(stateToSave));
+  }, [videoUrl, videoInfo, summary, transcript, showResults]);
 
   const handleGenerateSummary = async (url, summaryType = 'detailed') => {
     setLoading(true);
@@ -81,6 +120,7 @@ function App() {
     setTranscript('');
     setShowResults(false);
     setError('');
+    localStorage.removeItem(APP_STATE_KEY);
   };
 
   return (
