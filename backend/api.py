@@ -24,7 +24,7 @@ def get_video_info():
     """Get video title and ID from URL"""
     try:
         data = request.json
-        youtube_url = data.get('url')
+        youtube_url = (data.get('url') or '').strip()
         
         if not youtube_url:
             return jsonify({'error': 'URL is required'}), 400
@@ -49,7 +49,7 @@ def generate_summary():
     """Generate video summary"""
     try:
         data = request.json
-        youtube_url = data.get('url')
+        youtube_url = (data.get('url') or '').strip()
         summary_type = data.get('summaryType', 'detailed')  # 'short', 'detailed', or 'full'
         
         if not youtube_url:
@@ -74,7 +74,7 @@ def generate_summary():
         summary = Model.google_gemini(
             transcript=transcript,
             prompt=Prompt.prompt1(ID=prompt_id),
-            model_type="gemini-flash-latest"
+            model_type="gemini-2.5-flash"
         )
         
         # Check if summary generation failed
@@ -94,7 +94,7 @@ def get_transcript():
     """Get video transcript"""
     try:
         data = request.json
-        youtube_url = data.get('url')
+        youtube_url = (data.get('url') or '').strip()
         
         if not youtube_url:
             return jsonify({'error': 'URL is required'}), 400
@@ -116,7 +116,7 @@ def generate_highlights():
     """Generate video highlights with timestamps"""
     try:
         data = request.json
-        youtube_url = data.get('url')
+        youtube_url = (data.get('url') or '').strip()
         
         if not youtube_url:
             return jsonify({'error': 'URL is required'}), 400
@@ -147,7 +147,7 @@ VIDEO TRANSCRIPT WITH TIMESTAMPS:
         highlights_text = Model.google_gemini(
             transcript=transcript_time,
             prompt=highlight_prompt,
-            model_type="gemini-flash-latest"
+            model_type="gemini-2.5-flash"
         )
         
         if isinstance(highlights_text, tuple):

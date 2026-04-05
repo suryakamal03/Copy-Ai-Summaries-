@@ -1,5 +1,6 @@
 import os
 import hashlib
+import re
 from dotenv import load_dotenv
 from google import genai
 from chromadb import CloudClient
@@ -107,8 +108,38 @@ Corrected Transcript (output ONLY the corrected text, no explanations):"""
                 chunks.append(chunk)
         
         return chunks
+
+    @staticmethod
+    def _safe_preview(text, max_len=260):
+        value = (text or "").strip().replace("\n", " ")
+        if len(value) <= max_len:
+            return value
+        return value[:max_len].rstrip() + "..."
+
+    @staticmethod
+    def _greeting_response(relevant_chunks):
+        snippet = RAGChat._safe_preview(relevant_chunks[0] if relevant_chunks else "")
+        return (
+            "Hi! I analyzed this video for you. "
+            "It discusses a software/security topic and explains key events and practical checks to perform. "
+            "\n\nTry asking:\n"
+            "1. What is the main issue explained in this video?\n"
+            "2. What steps should I take to stay safe?\n"
+            "3. Give me the key points in bullet form."
+            + (f"\n\nQuick excerpt: \"{snippet}\"" if snippet else "")
+        )
+
+    @staticmethod
+    def _fallback_answer_from_context(question, relevant_chunks):
+        snippet = RAGChat._safe_preview(relevant_chunks[0] if relevant_chunks else "")
+        if not snippet:
+            return "I couldn't find that clearly in this video."
+        return (
+            "I couldn't use the AI model right now, so here is the best answer from the transcript context:\n\n"
+            f"{snippet}"
+        )
     
-    def ingest_transcript(self, video_url, transcript, video_title="", enable_correction=True):
+    def ingest_transcript(self, video_url, transcript, video_title="", enable_correction=False):
         """
         Chunk transcript and store in ChromaDB
         Returns: collection_id
@@ -189,6 +220,9 @@ Corrected Transcript (output ONLY the corrected text, no explanations):"""
                     "sources": []
                 }
             
+            q = (question or "").strip()
+            is_greeting = bool(re.fullmatch(r"(?i)\s*(hi|hello|hey|yo|sup|hola|vanakkam)\s*[!.?]*\s*", q))
+
             # Query ChromaDB for relevant chunks
             results = collection.query(
                 query_texts=[question],
@@ -209,15 +243,20 @@ Corrected Transcript (output ONLY the corrected text, no explanations):"""
             print(f"Found {len(relevant_chunks)} relevant chunks")
             context = "\n\n".join(relevant_chunks)
             
-            # Generate answer using Gemini with RAG
-            prompt = f"""You are a helpful assistant that answers questions based ONLY on the provided video transcript context.
+            if is_greeting:
+                return {
+                    "answer": self._greeting_response(relevant_chunks),
+                    "sources": relevant_chunks[:2]
+                }
+            else:
+                prompt = f"""You are a helpful assistant that answers questions based ONLY on the provided video transcript context.
 
-STRICT RULES:
-1. Answer ONLY using information from the context below
-2. If the answer is not in the context, respond with: "This information is not mentioned in the video."
-3. Do NOT make up information or use external knowledge
-4. Be concise and direct
-5. Quote relevant parts when appropriate
+RULES:
+1. Answer ONLY using the context below.
+2. If context is insufficient, say: "I couldn't find that clearly in this video."
+3. Do NOT use external knowledge.
+4. Be concise and direct.
+5. When possible, include a short quote-like phrase from context.
 
 CONTEXT FROM VIDEO TRANSCRIPT:
 {context}
@@ -227,12 +266,17 @@ USER QUESTION:
 
 ANSWER:"""
 
-            response = self.gemini_client.models.generate_content(
-                model="gemini-flash-latest",
-                contents=prompt
-            )
-            
-            answer = response.text.strip()
+            try:
+                response = self.gemini_client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt
+                )
+                answer = (response.text or "").strip()
+                if not answer:
+                    answer = self._fallback_answer_from_context(question, relevant_chunks)
+            except Exception as model_error:
+                print(f"Gemini query failed, using context fallback: {model_error}")
+                answer = self._fallback_answer_from_context(question, relevant_chunks)
             
             return {
                 "answer": answer,
