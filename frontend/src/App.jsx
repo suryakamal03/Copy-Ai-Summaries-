@@ -124,7 +124,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={showResults ? 'min-h-screen bg-gray-50' : 'min-h-screen bg-[#06111f]'}>
       {!showResults ? (
         <LandingPage 
           onGenerateSummary={handleGenerateSummary}

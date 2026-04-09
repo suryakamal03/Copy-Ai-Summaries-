@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import sys
+import re
 
 # Add src directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -10,6 +11,55 @@ from src.video_info import GetVideo
 from src.model import Model
 from src.prompt import Prompt
 from src.rag_chat import RAGChat
+
+
+def _parse_timestamped_transcript(transcript_text):
+    """Extract ordered timestamped snippets from the timestamped transcript payload."""
+    if not transcript_text:
+        return []
+
+    pattern = r'(.*?)(?:\s+"time:([0-9]{2}:[0-9]{2}:[0-9]{2})")'
+    matches = re.findall(pattern, transcript_text)
+    snippets = []
+
+    for text, timestamp in matches:
+        cleaned_text = ' '.join(text.split()).strip()
+        if cleaned_text:
+            snippets.append((timestamp, cleaned_text))
+
+    return snippets
+
+
+def _build_fallback_highlights(transcript_time, target_count=6):
+    """Create usable highlights directly from timestamped transcript snippets."""
+    snippets = _parse_timestamped_transcript(transcript_time)
+    if not snippets:
+        return []
+
+    if len(snippets) <= target_count:
+        selected = snippets
+    else:
+        step = max(1, len(snippets) // target_count)
+        selected = [snippets[index] for index in range(0, len(snippets), step)][:target_count]
+
+    highlights = []
+    for index, (timestamp, text) in enumerate(selected):
+        start_time = timestamp
+        if index + 1 < len(selected):
+            end_time = selected[index + 1][0]
+        else:
+            end_time = timestamp
+
+        summary = text
+        if len(summary) > 180:
+            summary = summary[:177].rstrip() + '...'
+
+        highlights.append({
+            'timestamp': f'{start_time} - {end_time}',
+            'description': summary,
+        })
+
+    return highlights
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
@@ -127,7 +177,9 @@ def generate_highlights():
         if not transcript_time or transcript_time.startswith('Error:'):
             return jsonify({'error': 'Could not fetch transcript'}), 400
         
-        # Generate highlights using Gemini
+        fallback_highlights = _build_fallback_highlights(transcript_time)
+
+        # Generate highlights using Gemini when available, but keep a transcript-based fallback.
         highlight_prompt = """Analyze the video transcript below and generate key highlights with timestamps.
 
 For each highlight:
@@ -144,46 +196,50 @@ Generate 5-8 highlights that cover the main parts of the video.
 VIDEO TRANSCRIPT WITH TIMESTAMPS:
 """
         
-        highlights_text = Model.google_gemini(
-            transcript=transcript_time,
-            prompt=highlight_prompt,
-            model_type="gemini-2.5-flash"
-        )
-        
-        if isinstance(highlights_text, tuple):
-            return jsonify({'error': highlights_text[0]}), 500
-        
-        # Parse highlights into structured format
         highlights = []
-        lines = highlights_text.strip().split('\n')
-        current_highlight = None
-        
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            
-            # Check if line is a timestamp (contains " - " and time format)
-            if ' - ' in line and any(c.isdigit() for c in line[:15]):
-                # Save previous highlight if exists
-                if current_highlight:
-                    highlights.append(current_highlight)
-                
-                # Start new highlight
-                current_highlight = {
-                    'timestamp': line,
-                    'description': ''
-                }
-            elif current_highlight is not None:
-                # Add to description
-                if current_highlight['description']:
-                    current_highlight['description'] += ' ' + line
-                else:
-                    current_highlight['description'] = line
-        
-        # Add last highlight
-        if current_highlight:
-            highlights.append(current_highlight)
+        try:
+            highlights_text = Model.google_gemini(
+                transcript=transcript_time,
+                prompt=highlight_prompt,
+                model_type="gemini-2.5-flash"
+            )
+
+            if isinstance(highlights_text, tuple):
+                raise RuntimeError(highlights_text[0])
+
+            lines = (highlights_text or '').strip().split('\n')
+            current_highlight = None
+
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+
+                # Check if line is a timestamp (contains " - " and time format)
+                if ' - ' in line and any(c.isdigit() for c in line[:15]):
+                    if current_highlight:
+                        highlights.append(current_highlight)
+
+                    current_highlight = {
+                        'timestamp': line,
+                        'description': '',
+                    }
+                elif current_highlight is not None:
+                    if current_highlight['description']:
+                        current_highlight['description'] += ' ' + line
+                    else:
+                        current_highlight['description'] = line
+
+            if current_highlight:
+                highlights.append(current_highlight)
+        except Exception as gemini_error:
+            print(f"Gemini highlights generation failed, using fallback: {gemini_error}")
+
+        if not highlights:
+            highlights = fallback_highlights
+
+        if not highlights:
+            return jsonify({'error': 'Could not generate highlights from transcript'}), 500
         
         return jsonify({
             'highlights': highlights
